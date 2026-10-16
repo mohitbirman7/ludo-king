@@ -104,6 +104,7 @@ $v = time();
   <p><b>QUICK:</b> shorter game. First token home wins.</p></div></div>
 <div id="toast" class="toast" hidden></div>
 <script>var G_SLOTS=[128, 224, 317, 410, 504];</script>
+<script src="assets/js/security.js?v=<?=$v?>"></script>
 <script src="assets/js/sound.js?v=<?=$v?>"></script>
 <script src="assets/js/setup.js?v=<?=$v?>"></script>
 <script src="assets/js/pwa.js?v=<?=$v?>"></script>

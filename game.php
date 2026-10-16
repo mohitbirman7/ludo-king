@@ -384,6 +384,7 @@ $v = time();
     </div>
   </div>
 
+  <script src="assets/js/security.js?v=<?=$v?>"></script>
   <script src="assets/js/sound.js?v=<?=$v?>"></script>
   <script src="assets/js/game.js?v=<?=$v?>"></script>
   <script src="assets/js/pwa.js?v=<?=$v?>"></script>

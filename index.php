@@ -60,7 +60,19 @@ $v = time();
       cursor: pointer;
       z-index: 10;
     }
-    #pass:active {
+    /* Play With Friends clickable button (Positioned over FRIENDS in original background) */
+    #friends {
+      position: absolute;
+      left: 65%;
+      top: 41.5%;
+      width: 27.5%;
+      height: 10.5%;
+      border-radius: 12px;
+      display: block;
+      cursor: pointer;
+      z-index: 10;
+    }
+    #friends:active {
       background: rgba(255, 255, 255, 0.25);
       transform: scale(0.97);
     }
@@ -262,10 +274,14 @@ $v = time();
     <!-- Sound Toggle Button -->
     <button id="home-sound-btn" title="Toggle Sound">🔊</button>
 
-    <!-- Sirf Pass N Play Clickable (Takes to setup.php) -->
+    <!-- Play With Friends Clickable (Takes to online.php) -->
+    <a id="friends" href="online.php" aria-label="Play with Friends"></a>
+
+    <!-- Pass N Play Clickable (Takes to setup.php) -->
     <a id="pass" href="setup.php" aria-label="Pass N Play"></a>
   </div>
 
+  <script src="assets/js/security.js?v=<?=$v?>"></script>
   <script src="assets/js/sound.js?v=<?=$v?>"></script>
   <script src="assets/js/home.js?v=<?=$v?>"></script>
   <script src="assets/js/pwa.js?v=<?=$v?>"></script>

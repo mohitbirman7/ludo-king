@@ -11,12 +11,12 @@ const Snd = (() => {
   let bgmStarted = false;
   const audioCache = {};
 
-  const SFX_FILES = ['click', 'dice', 'move', 'snake_step', 'kill', 'home', 'win', 'start'];
+  const SFX_FILES = ['click', 'dice', 'move', 'snake_step', 'kill', 'home', 'win', 'start', 'snake_hiss'];
 
   // Preload authentic sound files (WAV for crisp kill & snake retreat, MP3 for music/fx)
   SFX_FILES.forEach(name => {
     try {
-      const ext = (name === 'kill' || name === 'snake_step') ? '.wav' : '.mp3';
+      const ext = (name === 'kill' || name === 'snake_step' || name === 'snake_hiss') ? '.wav' : '.mp3';
       const a = new Audio('assets/snd/' + name + ext + '?v=' + Date.now());
       a.preload = 'auto';
       audioCache[name] = a;
@@ -169,8 +169,10 @@ const Snd = (() => {
     },
     kill: () => {
       unlock();
-      if (!playFile('kill', 1.0)) {
-        synthTone(160, 0.12, 'sawtooth', 0.45, 0, 45);
+      if (!playFile('snake_hiss', 1.0)) {
+        if (!playFile('kill', 1.0)) {
+          synthTone(160, 0.12, 'sawtooth', 0.45, 0, 45);
+        }
       }
     },
     home: () => {
