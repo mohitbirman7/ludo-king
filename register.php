@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $hash = password_hash($password, PASSWORD_DEFAULT);
         
         // Check if admin already exists
-        $s = $pdo->prepare("SELECT id FROM admins WHERE username = ?");
+        $s = $pdo->prepare("SELECT id FROM admins WHERE LOWER(username) = LOWER(?)");
         $s->execute([$email]);
         $existing = $s->fetch(PDO::FETCH_ASSOC);
 
