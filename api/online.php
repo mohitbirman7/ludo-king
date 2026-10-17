@@ -264,6 +264,9 @@ try {
                     'turn_color' => $room['turn_color'],
                     'dice_value' => (int)$room['dice_value'],
                     'dice_state' => $room['dice_state'],
+                    'roll_seq' => (int)($room['roll_seq'] ?? 0),
+                    'move_seq' => (int)($room['move_seq'] ?? 0),
+                    'last_move' => !empty($room['last_move_json']) ? json_decode($room['last_move_json'], true) : null,
                     'winner' => $room['winner']
                 ],
                 'players' => $players,
@@ -328,17 +331,19 @@ try {
                 if ($pos >= 0 && ($pos + $d) <= 56) { $hasMove = true; break; }
             }
 
+            $rollSeq = (int)($room['roll_seq'] ?? 0) + 1;
+
             if ($hasMove) {
                 // Player must now pick a token
-                $pdo->prepare("UPDATE online_rooms SET dice_value = ?, dice_state = 'move', updated_at = CURRENT_TIMESTAMP WHERE room_code = ?")
-                    ->execute([$d, $room_code]);
-                echo json_encode(['ok' => true, 'dice' => $d, 'state' => 'move']);
+                $pdo->prepare("UPDATE online_rooms SET dice_value = ?, dice_state = 'move', roll_seq = ?, updated_at = CURRENT_TIMESTAMP WHERE room_code = ?")
+                    ->execute([$d, $rollSeq, $room_code]);
+                echo json_encode(['ok' => true, 'dice' => $d, 'state' => 'move', 'roll_seq' => $rollSeq, 'turn' => $myColor]);
             } else {
                 // No valid moves! Turn passes to next player (unless rolled 6)
                 $nextColor = getNextTurnColor($pdo, $room_code, $myColor);
-                $pdo->prepare("UPDATE online_rooms SET dice_value = ?, dice_state = 'roll', turn_color = ?, updated_at = CURRENT_TIMESTAMP WHERE room_code = ?")
-                    ->execute([$d, $nextColor, $room_code]);
-                echo json_encode(['ok' => true, 'dice' => $d, 'state' => 'pass', 'next_turn' => $nextColor]);
+                $pdo->prepare("UPDATE online_rooms SET dice_value = ?, dice_state = 'roll', roll_seq = ?, turn_color = ?, updated_at = CURRENT_TIMESTAMP WHERE room_code = ?")
+                    ->execute([$d, $rollSeq, $nextColor, $room_code]);
+                echo json_encode(['ok' => true, 'dice' => $d, 'state' => 'pass', 'roll_seq' => $rollSeq, 'next_turn' => $nextColor, 'turn' => $myColor]);
             }
             break;
 
@@ -400,6 +405,7 @@ try {
 
             // Check for capture (kill) on track (positions 0 to 50)
             $isKill = false;
+            $killedTarget = null;
             if ($newPos >= 0 && $newPos <= 50) {
                 $myAbs = ($START_OFFSET[$myColor] + $newPos) % 52;
                 if (!in_array($myAbs, $SAFE_POS, true)) {
@@ -413,6 +419,11 @@ try {
                         if ($oppAbs === $myAbs) {
                             // KILL OPPONENT TOKEN!
                             $isKill = true;
+                            $killedTarget = [
+                                'color' => $ot['color'],
+                                'token_index' => (int)$ot['token_index'],
+                                'from_pos' => (int)$ot['pos']
+                            ];
                             $pdo->prepare("UPDATE online_tokens SET pos = -1 WHERE room_code = ? AND color = ? AND token_index = ?")
                                 ->execute([$room_code, $ot['color'], $ot['token_index']]);
                         }
@@ -420,32 +431,43 @@ try {
                 }
             }
 
+            $moveSeq = (int)($room['move_seq'] ?? 0) + 1;
+            $lastMove = [
+                'seq' => $moveSeq,
+                'color' => $myColor,
+                'token_index' => $token_index,
+                'from_pos' => $currentPos,
+                'to_pos' => $newPos,
+                'killed' => $killedTarget
+            ];
+            $lastMoveJson = json_encode($lastMove);
+
             // Check for win (all 4 tokens at 56)
             $finSt = $pdo->prepare("SELECT COUNT(*) FROM online_tokens WHERE room_code = ? AND color = ? AND pos = 56");
             $finSt->execute([$room_code, $myColor]);
             $isWinner = ((int)$finSt->fetchColumn() === 4);
 
             if ($isWinner) {
-                $pdo->prepare("UPDATE online_rooms SET status = 'finished', winner = ?, updated_at = CURRENT_TIMESTAMP WHERE room_code = ?")
-                    ->execute([$myColor, $room_code]);
+                $pdo->prepare("UPDATE online_rooms SET status = 'finished', winner = ?, move_seq = ?, last_move_json = ?, updated_at = CURRENT_TIMESTAMP WHERE room_code = ?")
+                    ->execute([$myColor, $moveSeq, $lastMoveJson, $room_code]);
                 $pdo->commit();
-                echo json_encode(['ok' => true, 'kill' => $isKill, 'winner' => $myColor]);
+                echo json_encode(['ok' => true, 'kill' => $isKill, 'winner' => $myColor, 'last_move' => $lastMove]);
                 exit;
             }
 
             // Turn progression: player gets another turn if rolled 6 or killed opponent
             $bonusRoll = ($d === 6 || $isKill);
             if ($bonusRoll) {
-                $pdo->prepare("UPDATE online_rooms SET dice_state = 'roll', updated_at = CURRENT_TIMESTAMP WHERE room_code = ?")
-                    ->execute([$room_code]);
+                $pdo->prepare("UPDATE online_rooms SET dice_state = 'roll', move_seq = ?, last_move_json = ?, updated_at = CURRENT_TIMESTAMP WHERE room_code = ?")
+                    ->execute([$moveSeq, $lastMoveJson, $room_code]);
                 $pdo->commit();
-                echo json_encode(['ok' => true, 'kill' => $isKill, 'bonus' => true, 'turn' => $myColor]);
+                echo json_encode(['ok' => true, 'kill' => $isKill, 'bonus' => true, 'turn' => $myColor, 'last_move' => $lastMove]);
             } else {
                 $nextColor = getNextTurnColor($pdo, $room_code, $myColor);
-                $pdo->prepare("UPDATE online_rooms SET dice_state = 'roll', turn_color = ?, updated_at = CURRENT_TIMESTAMP WHERE room_code = ?")
-                    ->execute([$nextColor, $room_code]);
+                $pdo->prepare("UPDATE online_rooms SET dice_state = 'roll', turn_color = ?, move_seq = ?, last_move_json = ?, updated_at = CURRENT_TIMESTAMP WHERE room_code = ?")
+                    ->execute([$nextColor, $moveSeq, $lastMoveJson, $room_code]);
                 $pdo->commit();
-                echo json_encode(['ok' => true, 'kill' => $isKill, 'bonus' => false, 'turn' => $nextColor]);
+                echo json_encode(['ok' => true, 'kill' => $isKill, 'bonus' => false, 'turn' => $nextColor, 'last_move' => $lastMove]);
             }
             break;
 

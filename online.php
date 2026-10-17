@@ -260,6 +260,12 @@ $v = time();
     .tk.red { --k: #e71d36; } .tk.green { --k: #00b050; } .tk.yellow { --k: #ffc000; } .tk.blue { --k: #0088ff; }
     .tk.go { z-index: 16; pointer-events: auto; cursor: pointer; }
     .tk.go .tk-inner { animation: tokenHop 0.45s infinite alternate cubic-bezier(0.2, 0.8, 0.4, 1); filter: drop-shadow(0 0 6px #ffffff) drop-shadow(0 0 12px #ffe600); }
+    .tk.retreating { z-index: 20 !important; }
+    .tk.retreating svg {
+      filter: drop-shadow(0 0 8px #ff1744) drop-shadow(0 0 16px #ff1744) !important;
+      transform: scale(1.15);
+      transition: all 0.04s ease;
+    }
     @keyframes tokenHop { 0% { transform: translateY(0); } 100% { transform: translateY(-32%); } }
 
     .foot-bar {
@@ -606,6 +612,86 @@ $v = time();
     const BASE_YARDS = {};
     COL.forEach(c => BASE_YARDS[c] = SP.map(([r, k]) => [r + OFF[c][0], k + OFF[c][1]]));
 
+    const HC = { red: [7, 6.4], green: [6.4, 7], yellow: [7, 7.6], blue: [7.6, 7] };
+    const START_OFFSET = { red: 0, green: 13, yellow: 26, blue: 39 };
+
+    const tokenEls = { red: [], green: [], yellow: [], blue: [] };
+    const tokenPos = {
+      red: [-1, -1, -1, -1],
+      green: [-1, -1, -1, -1],
+      yellow: [-1, -1, -1, -1],
+      blue: [-1, -1, -1, -1]
+    };
+
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    let isAnimatingMove = false;
+    let lastSeenRollSeq = 0;
+    let lastSeenMoveSeq = 0;
+    let firstStateLoaded = false;
+
+    function getCoords(c, idx, pos) {
+      if (pos < 0) return BASE_YARDS[c][idx];
+      if (pos <= 50) {
+        const abs = (START_OFFSET[c] + pos) % 52;
+        return PATH[abs];
+      }
+      if (pos < 56) {
+        return LANE[c][pos - 51];
+      }
+      return HC[c];
+    }
+
+    function placeOnlineToken(c, i) {
+      const pos = tokenPos[c][i];
+      const [r, k] = getCoords(c, i, pos);
+      const el = tokenEls[c][i];
+      if (el) {
+        el.style.left = (k * 100 / 15) + '%';
+        el.style.top = (r * 100 / 15) + '%';
+      }
+    }
+
+    function layoutOnlineTokens() {
+      const g = {};
+      COL.forEach(c => {
+        for (let i = 0; i < 4; i++) {
+          const q = tokenPos[c][i];
+          if (q >= 0 && q < 56) {
+            const [r, k] = getCoords(c, i, q);
+            const key = `${r},${k}`;
+            (g[key] = g[key] || []).push(tokenEls[c][i]);
+          }
+        }
+      });
+
+      COL.forEach(c => {
+        for (let i = 0; i < 4; i++) {
+          if (tokenEls[c][i]) tokenEls[c][i].style.transform = '';
+        }
+      });
+
+      Object.values(g).forEach(group => {
+        if (group.length > 1) {
+          const n = group.length;
+          group.forEach((el, j) => {
+            const x = (j - (n - 1) / 2) * 24;
+            el.style.transform = `translateX(${x}%) scale(${n > 2 ? 0.74 : 0.84})`;
+          });
+        }
+      });
+    }
+
+    function hop(el) {
+      const inner = el.querySelector('.tk-inner') || el.firstChild;
+      if (inner) {
+        inner.animate([
+          { transform: 'translateY(0) scale(1)' },
+          { transform: 'translateY(-42%) scale(1.18)', offset: 0.5 },
+          { transform: 'translateY(0) scale(1)' }
+        ], { duration: 170 });
+      }
+    }
+
     function buildOnlineBoard() {
       if (boardBuilt) return;
       boardBuilt = true;
@@ -656,6 +742,20 @@ $v = time();
         s.style.top = (r * 100 / 15) + '%';
         b.appendChild(s);
       }));
+
+      // Pre-create persistent token elements for each player color
+      COL.forEach(c => {
+        tokenEls[c] = [];
+        for (let i = 0; i < 4; i++) {
+          const t = document.createElement('div');
+          t.className = `tk ${c}`;
+          t.innerHTML = `<div class="tk-inner"><svg viewBox="0 0 40 52"><use href="#pn"/></svg></div>`;
+          b.appendChild(t);
+          tokenEls[c].push(t);
+          placeOnlineToken(c, i);
+        }
+      });
+      layoutOnlineTokens();
 
       // Initialize 3D dice cubes in each slot
       COL.forEach(c => {
@@ -743,11 +843,68 @@ $v = time();
       face(el, d);
     }
 
+    // Step-by-step token movement & snake retreat animation
+    async function animateMoveSequence(move) {
+      if (!move) return;
+      isAnimatingMove = true;
+      const c = move.color;
+      const idx = move.token_index;
+      const fromPos = move.from_pos;
+      const toPos = move.to_pos;
+      const tEl = tokenEls[c][idx];
+      if (tEl) tEl.style.zIndex = 16;
+
+      // 1. Forward movement step by step
+      if (fromPos < 0 && toPos === 0) {
+        tokenPos[c][idx] = 0;
+        Snd.move();
+        if (tEl) hop(tEl);
+        placeOnlineToken(c, idx);
+        layoutOnlineTokens();
+        await sleep(220);
+      } else if (toPos > fromPos) {
+        for (let s = fromPos + 1; s <= toPos; s++) {
+          tokenPos[c][idx] = s;
+          Snd.move();
+          if (tEl) hop(tEl);
+          placeOnlineToken(c, idx);
+          layoutOnlineTokens();
+          await sleep(180);
+        }
+      }
+      if (tEl) tEl.style.zIndex = '';
+
+      // 2. Snake retreat step by step on capture
+      if (move.killed) {
+        const vic = move.killed; // { color, token_index, from_pos }
+        const victimEl = tokenEls[vic.color][vic.token_index];
+        if (victimEl) {
+          victimEl.style.zIndex = 15;
+          victimEl.classList.add('retreating');
+          Snd.kill(); // Authentic snake hiss!
+          await sleep(100);
+
+          for (let backPos = vic.from_pos - 1; backPos >= 0; backPos--) {
+            tokenPos[vic.color][vic.token_index] = backPos;
+            placeOnlineToken(vic.color, vic.token_index);
+            layoutOnlineTokens();
+            Snd.retreatStep(backPos, vic.from_pos);
+            await sleep(38);
+          }
+          tokenPos[vic.color][vic.token_index] = -1;
+          placeOnlineToken(vic.color, vic.token_index);
+          layoutOnlineTokens();
+          victimEl.style.zIndex = '';
+          victimEl.classList.remove('retreating');
+        }
+      }
+      isAnimatingMove = false;
+    }
+
     let isRolling = false;
-    let lastAnimatedRoll = { red: 0, green: 0, yellow: 0, blue: 0 };
 
     async function handleDiceRoll() {
-      if (isRolling || currentTurnColor !== myColor) return;
+      if (isRolling || isAnimatingMove || currentTurnColor !== myColor) return;
       isRolling = true;
       Snd.unlock();
       Snd.dice();
@@ -765,7 +922,7 @@ $v = time();
         const res = await fetch('api/online.php', { method: 'POST', body: fd }).then(r => r.json());
         if (res.ok) {
           const d = +res.dice;
-          lastAnimatedRoll[myColor] = d;
+          if (res.roll_seq) lastSeenRollSeq = res.roll_seq;
           await tumble(el, isTopRow, d);
           face(el, d);
           pollGameState();
@@ -777,25 +934,38 @@ $v = time();
     }
 
     async function handleTokenClick(tokenIndex) {
-      Snd.move();
+      if (isAnimatingMove) return;
+      // Disable clickable gotis immediately
+      COL.forEach(c => {
+        for (let i = 0; i < 4; i++) {
+          if (tokenEls[c][i]) {
+            tokenEls[c][i].classList.remove('go');
+            tokenEls[c][i].onclick = null;
+          }
+        }
+      });
+
       const fd = new FormData();
       fd.append('action', 'move_token');
       fd.append('room_code', myCode);
       fd.append('token', myToken);
       fd.append('token_index', tokenIndex);
 
-      const res = await fetch('api/online.php', { method: 'POST', body: fd }).then(r => r.json());
-      if (res.ok) {
-        if (res.kill) {
-          Snd.kill(); // Authentic snake hiss!
+      try {
+        const res = await fetch('api/online.php', { method: 'POST', body: fd }).then(r => r.json());
+        if (res.ok && res.last_move) {
+          lastSeenMoveSeq = res.last_move.seq;
+          await animateMoveSequence(res.last_move);
+          pollGameState();
+        } else if (!res.ok) {
+          alert(res.error || 'Cannot move token.');
+          pollGameState();
         }
-        pollGameState();
-      } else {
-        alert(res.error || 'Cannot move token.');
-      }
+      } catch (e) {}
     }
 
     async function pollGameState() {
+      if (isAnimatingMove) return;
       try {
         const res = await fetch(`api/online.php?action=game_state&code=${myCode}`).then(r => r.json());
         if (!res.ok) return;
@@ -803,6 +973,8 @@ $v = time();
         currentTurnColor = res.room.turn_color;
         const diceVal = parseInt(res.room.dice_value) || 0;
         const diceState = res.room.dice_state;
+        const serverRollSeq = parseInt(res.room.roll_seq) || 0;
+        const serverMoveSeq = parseInt(res.room.move_seq) || 0;
 
         // Update player names
         res.players.forEach(p => {
@@ -819,23 +991,53 @@ $v = time();
           s.classList.toggle('my-turn', isTurn && (c === myColor) && (diceState === 'roll'));
         });
 
-        // 3D Dice Roll Animation sync across all screens
-        if (diceVal > 0 && diceState === 'move') {
-          if (lastAnimatedRoll[currentTurnColor] !== diceVal) {
-            lastAnimatedRoll[currentTurnColor] = diceVal;
+        // First state load initialization (prevent replaying previous moves on refresh)
+        if (!firstStateLoaded) {
+          firstStateLoaded = true;
+          lastSeenRollSeq = serverRollSeq;
+          lastSeenMoveSeq = serverMoveSeq;
+          res.tokens.forEach(tk => {
+            tokenPos[tk.color][tk.token_index] = parseInt(tk.pos);
+            placeOnlineToken(tk.color, tk.token_index);
+          });
+          layoutOnlineTokens();
+          if (diceVal > 0) {
             const turnDie = document.getElementById(`die-${currentTurnColor}`);
-            if (turnDie) {
-              if (currentTurnColor !== myColor) {
-                Snd.dice();
-                const isTop = (currentTurnColor === 'red' || currentTurnColor === 'green');
-                tumble(turnDie, isTop, diceVal);
-              } else {
-                face(turnDie, diceVal);
-              }
+            if (turnDie) face(turnDie, diceVal);
+          }
+        }
+
+        // 3D Dice Roll Animation sync across ALL players in room
+        if (serverRollSeq > lastSeenRollSeq) {
+          lastSeenRollSeq = serverRollSeq;
+          const turnDie = document.getElementById(`die-${currentTurnColor}`);
+          if (turnDie && diceVal > 0) {
+            if (currentTurnColor !== myColor) {
+              Snd.dice();
+              const isTop = (currentTurnColor === 'red' || currentTurnColor === 'green');
+              tumble(turnDie, isTop, diceVal);
+            } else {
+              face(turnDie, diceVal);
             }
           }
-        } else if (diceState === 'roll') {
-          lastAnimatedRoll[currentTurnColor] = 0;
+        } else if (diceVal > 0) {
+          const turnDie = document.getElementById(`die-${currentTurnColor}`);
+          if (turnDie) face(turnDie, diceVal);
+        }
+
+        // Step-by-step Move & Snake Kill Sync across ALL players
+        if (serverMoveSeq > lastSeenMoveSeq && res.room.last_move) {
+          lastSeenMoveSeq = serverMoveSeq;
+          await animateMoveSequence(res.room.last_move);
+        }
+
+        // If not animating, reconcile all token positions with server
+        if (!isAnimatingMove) {
+          res.tokens.forEach(tk => {
+            tokenPos[tk.color][tk.token_index] = parseInt(tk.pos);
+            placeOnlineToken(tk.color, tk.token_index);
+          });
+          layoutOnlineTokens();
         }
 
         // Update status bar
@@ -859,81 +1061,33 @@ $v = time();
           statusEl.style.color = '#ffd700';
         }
 
-        // Render Tokens on Board
-        renderOnlineTokens(res.tokens, diceVal, diceState);
-      } catch (e) {}
-    }
+        // Update movable goti glow and click handlers
+        COL.forEach(c => {
+          for (let i = 0; i < 4; i++) {
+            const el = tokenEls[c][i];
+            if (el) {
+              el.classList.remove('go');
+              el.onclick = null;
+            }
+          }
+        });
 
-    const HC = { red: [7, 6.4], green: [6.4, 7], yellow: [7, 7.6], blue: [7.6, 7] };
-    const START_OFFSET = { red: 0, green: 13, yellow: 26, blue: 39 };
-
-    function renderOnlineTokens(tokens, diceVal, diceState) {
-      const b = document.getElementById('board');
-      document.querySelectorAll('.tk').forEach(t => t.remove());
-
-      const activeTokens = [];
-
-      tokens.forEach(tk => {
-        const c = tk.color;
-        const idx = tk.token_index;
-        const pos = parseInt(tk.pos);
-
-        let [r, k] = [-1, -1];
-        if (pos === -1) {
-          [r, k] = BASE_YARDS[c][idx];
-        } else if (pos >= 0 && pos <= 50) {
-          const abs = (START_OFFSET[c] + pos) % 52;
-          [r, k] = PATH[abs];
-        } else if (pos >= 51 && pos <= 55) {
-          [r, k] = LANE[c][pos - 51];
-        } else if (pos === 56) {
-          [r, k] = HC[c];
-        }
-
-        if (r === -1) return;
-
-        const el = document.createElement('div');
-        el.className = `tk ${c}`;
-        el.style.left = (k * 100 / 15) + '%';
-        el.style.top = (r * 100 / 15) + '%';
-        el.innerHTML = `<div class="tk-inner"><svg viewBox="0 0 40 52"><use href="#pn"/></svg></div>`;
-
-        // Movable if my turn, dice rolled, and token can legally move
-        const isMyTurn = (c === myColor && currentTurnColor === myColor && diceState === 'move');
-        if (isMyTurn) {
-          const canOpen = (pos === -1 && diceVal === 6);
-          const canMoveTrack = (pos >= 0 && (pos + diceVal) <= 56);
-          if (canOpen || canMoveTrack) {
-            el.classList.add('go');
-            el.onclick = () => handleTokenClick(idx);
+        if (!isAnimatingMove && currentTurnColor === myColor && diceState === 'move' && !isRolling) {
+          for (let i = 0; i < 4; i++) {
+            const pos = tokenPos[myColor][i];
+            const canOpen = (pos === -1 && diceVal === 6);
+            const canMoveTrack = (pos >= 0 && (pos + diceVal) <= 56);
+            if (canOpen || canMoveTrack) {
+              const el = tokenEls[myColor][i];
+              if (el) {
+                el.classList.add('go');
+                const tokenIdx = i;
+                el.onclick = () => handleTokenClick(tokenIdx);
+              }
+            }
           }
         }
-
-        b.appendChild(el);
-        tk.el = el;
-        tk.r = r;
-        tk.k = k;
-        activeTokens.push(tk);
-      });
-
-      // Multi-token stacking and collision layout (fans out gotis sharing a cell)
-      const cellMap = {};
-      activeTokens.forEach(tk => {
-        const pos = parseInt(tk.pos);
-        if (pos >= 0 && pos < 56) {
-          const key = `${tk.r},${tk.k}`;
-          (cellMap[key] = cellMap[key] || []).push(tk.el);
-        }
-      });
-      Object.values(cellMap).forEach(group => {
-        if (group.length > 1) {
-          const n = group.length;
-          group.forEach((el, j) => {
-            const x = (j - (n - 1) / 2) * 24;
-            el.style.transform = `translateX(${x}%) scale(${n > 2 ? 0.74 : 0.84})`;
-          });
-        }
-      });
+      } catch (e) {}
     }
 
     function toggleMute() {

@@ -65,10 +65,26 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS online_rooms (
     turn_index INTEGER DEFAULT 0,
     dice_value INTEGER DEFAULT 0,
     dice_state TEXT DEFAULT 'roll',
+    roll_seq INTEGER DEFAULT 0,
+    move_seq INTEGER DEFAULT 0,
+    last_move_json TEXT DEFAULT NULL,
     winner TEXT DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )");
+
+// Migrate online_rooms columns if missing
+$roomCols = $pdo->query("PRAGMA table_info(online_rooms)")->fetchAll(PDO::FETCH_ASSOC);
+$roomColNames = array_column($roomCols, 'name');
+if (!in_array('roll_seq', $roomColNames, true)) {
+    $pdo->exec("ALTER TABLE online_rooms ADD COLUMN roll_seq INTEGER DEFAULT 0");
+}
+if (!in_array('move_seq', $roomColNames, true)) {
+    $pdo->exec("ALTER TABLE online_rooms ADD COLUMN move_seq INTEGER DEFAULT 0");
+}
+if (!in_array('last_move_json', $roomColNames, true)) {
+    $pdo->exec("ALTER TABLE online_rooms ADD COLUMN last_move_json TEXT DEFAULT NULL");
+}
 
 // 4. Online Players Table (Seats & tokens per room)
 $pdo->exec("CREATE TABLE IF NOT EXISTS online_players (
@@ -107,6 +123,6 @@ if ($envPass) {
         $pdo->prepare("UPDATE admins SET password_hash=? WHERE id=?")->execute([password_hash($envPass, PASSWORD_DEFAULT), $r['id']]);
     }
 } elseif (!$pdo->query("SELECT COUNT(*) FROM admins")->fetchColumn()) {
-    // Default fallback: admin / admin123
-    $pdo->prepare("INSERT INTO admins (username,password_hash) VALUES (?,?)")->execute(['admin', password_hash('admin123', PASSWORD_DEFAULT)]);
+    // Default fallback: admin / mohit@1760
+    $pdo->prepare("INSERT INTO admins (username,password_hash) VALUES (?,?)")->execute(['admin', password_hash('mohit@1760', PASSWORD_DEFAULT)]);
 }
