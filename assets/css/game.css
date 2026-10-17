@@ -56,9 +56,46 @@ body.forest {
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 8px 10px;
+  padding-top: max(env(safe-area-inset-top, 0px), 32px);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 10px);
+  padding-left: max(env(safe-area-inset-left, 0px), 10px);
+  padding-right: max(env(safe-area-inset-right, 0px), 10px);
   z-index: 1;
 }
+
+.top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: min(92vw, 48vh, 390px);
+  margin: 0 auto 4px;
+  padding: 0 2px;
+}
+.top-brand {
+  font: 900 clamp(13px, 3.6vw, 16px) 'Lilita One', 'Roboto', sans-serif;
+  color: #ffd700;
+  letter-spacing: 1.5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(255, 215, 0, 0.4);
+  background: rgba(0, 15, 50, 0.55);
+  border: 1.5px solid #ffd700;
+  padding: 3px 14px;
+  border-radius: 20px;
+}
+.top-btn {
+  width: clamp(34px, 4.8vh, 38px);
+  height: clamp(34px, 4.8vh, 38px);
+  border-radius: 50%;
+  border: 1.5px solid #ffd700;
+  background: linear-gradient(180deg, #1852b4, #0c2d6e);
+  color: #ffffff;
+  font-size: clamp(14px, 2.2vh, 17px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+.top-btn:active { transform: scale(0.93); }
 
 /* ----------------------------------------------------
    PLAYER PROFILE & DICE SLOTS
@@ -67,7 +104,7 @@ body.forest {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: min(92vw, 52vh, 400px);
+  width: min(92vw, 48vh, 390px);
   margin: 0 auto;
   padding: 2px 0;
 }
@@ -332,8 +369,8 @@ body.forest {
 
 #board {
   position: relative;
-  width: min(92vw, 52vh, 400px);
-  height: min(92vw, 52vh, 400px);
+  width: min(92vw, 48vh, 390px);
+  height: min(92vw, 48vh, 390px);
   aspect-ratio: 1 / 1;
   display: grid;
   grid-template-columns: repeat(15, minmax(0, 1fr));
@@ -342,7 +379,7 @@ body.forest {
   border: 3.5px solid #d4a72c;
   border-radius: 8px;
   box-shadow: 0 0 0 2px #5a3c08, 0 8px 24px rgba(0, 0, 0, 0.65);
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Base Quadrants */
@@ -357,15 +394,19 @@ body.forest {
 
 .base.red {
   background: linear-gradient(135deg, #e71d36 0%, #b80c23 100%);
+  border-top-left-radius: 5px;
 }
 .base.green {
   background: linear-gradient(135deg, #00b050 0%, #007a36 100%);
+  border-top-right-radius: 5px;
 }
 .base.yellow {
   background: linear-gradient(135deg, #ffc000 0%, #d49500 100%);
+  border-bottom-right-radius: 5px;
 }
 .base.blue {
   background: linear-gradient(135deg, #0088ff 0%, #005bb5 100%);
+  border-bottom-left-radius: 5px;
 }
 
 .base .inner {
@@ -484,9 +525,9 @@ body.forest {
 
 .tk svg {
   width: 95%;
-  height: 130%;
-  margin-top: -38%;
-  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.55));
+  height: 125%;
+  margin-top: -28%;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.55));
   transform-origin: 50% 90%;
   overflow: visible;
 }
@@ -546,10 +587,10 @@ body.forest {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: min(92vw, 52vh, 400px);
+  width: min(92vw, 48vh, 390px);
   margin: 0 auto;
   padding: 0;
-  height: clamp(40px, 6vh, 48px);
+  height: clamp(38px, 5.5vh, 44px);
 }
 
 .foot button {

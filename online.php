@@ -31,7 +31,11 @@ $v = time();
     .stage {
       position: relative; width: 100%; max-width: 440px; height: 100dvh; max-height: 100dvh;
       display: flex; flex-direction: column; justify-content: space-between; align-items: center;
-      padding: 6px 8px 10px; z-index: 1;
+      padding-top: max(env(safe-area-inset-top, 0px), 32px);
+      padding-bottom: max(env(safe-area-inset-bottom, 0px), 10px);
+      padding-left: max(env(safe-area-inset-left, 0px), 10px);
+      padding-right: max(env(safe-area-inset-right, 0px), 10px);
+      z-index: 1;
     }
     /* Lobby Screen Card */
     #lobby-screen {
@@ -133,22 +137,24 @@ $v = time();
     #game-screen { display: none; width: 100%; height: 100%; flex-direction: column; justify-content: space-between; align-items: center; }
     .top-bar {
       display: flex; justify-content: space-between; align-items: center;
-      width: min(92vw, 52vh, 400px); padding: 4px 0;
+      width: min(92vw, 48vh, 390px); padding: 4px 2px; margin: 0 auto 4px;
     }
     .room-pill {
       background: rgba(0, 20, 60, 0.7); border: 1.5px solid #ffd700; border-radius: 12px;
-      padding: 4px 10px; font-size: 12px; font-weight: 900; color: #ffd700;
+      padding: 4px 12px; font-size: 12px; font-weight: 900; color: #ffd700; letter-spacing: 1px;
     }
     .btn-icon {
-      width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid #ffd700;
+      width: clamp(34px, 4.8vh, 38px); height: clamp(34px, 4.8vh, 38px); border-radius: 50%; border: 1.5px solid #ffd700;
       background: linear-gradient(180deg, #1852b4, #0c2d6e); color: #ffffff;
-      font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: clamp(14px, 2.2vh, 17px); cursor: pointer; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
     }
+    .btn-icon:active { transform: scale(0.93); }
 
     /* Player Cards & Board Styles */
     .rowS {
       display: flex; justify-content: space-between; align-items: center;
-      width: min(92vw, 52vh, 400px); margin: 0 auto; padding: 2px 0;
+      width: min(92vw, 48vh, 390px); margin: 0 auto; padding: 2px 0;
     }
     .slot {
       position: relative; display: flex; align-items: center; justify-content: space-between;
@@ -171,13 +177,12 @@ $v = time();
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .db {
-      position: relative; width: clamp(40px, 6vh, 48px); height: clamp(40px, 6vh, 48px);
+      position: relative; width: clamp(42px, 6.2vh, 50px); height: clamp(42px, 6.2vh, 50px);
       background: radial-gradient(circle at 45% 45%, #ffffff 0%, #f6ece0 65%, #ded0bd 100%);
       border: 2px solid #bba38a; border-radius: 10px; display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       box-shadow: inset 0 2px 4px rgba(0,0,0,0.35); cursor: pointer; flex-shrink: 0;
     }
-    .die-val { font-size: 22px; font-weight: 900; color: #222; }
     .dots-timer { position: absolute; bottom: 2px; left: 0; right: 0; display: flex; justify-content: center; gap: 2px; }
     .dots-timer i { display: block; width: 3.5px; height: 3.5px; border-radius: 50%; background: #998a77; }
     .slot.act .dots-timer i { background: #22c55e; box-shadow: 0 0 4px #22c55e; }
@@ -192,19 +197,39 @@ $v = time();
     }
     @keyframes promptBounceDown { 0% { transform: translate(-50%, 0); } 100% { transform: translate(-50%, -6px); } }
 
+    /* 3D Dice Cube Styles */
+    .die { width: clamp(34px, 5vh, 42px); height: clamp(34px, 5vh, 42px); position: relative; visibility: hidden; perspective: 260px; isolation: isolate; }
+    .die.show { visibility: visible; }
+    .die.big { z-index: 30; will-change: transform; }
+    .cube { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
+    .f {
+      position: absolute; inset: 0; border-radius: 20%; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+      padding: 10%; backface-visibility: hidden; background: linear-gradient(145deg, #ffffff 0%, #f4eee2 55%, #dfd5be 100%);
+      border: 1px solid rgba(0, 0, 0, 0.15); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.15), inset 0 2px 2px rgba(255, 255, 255, 0.95);
+    }
+    .f1 { transform: translateZ(21px); }
+    .f6 { transform: rotateY(180deg) translateZ(21px); }
+    .f2 { transform: rotateY(90deg) translateZ(21px); }
+    .f5 { transform: rotateY(-90deg) translateZ(21px); }
+    .f3 { transform: rotateX(90deg) translateZ(21px); }
+    .f4 { transform: rotateX(-90deg) translateZ(21px); }
+    .f i { width: 82%; height: 82%; margin: auto; border-radius: 50%; }
+    .f i.on { background: radial-gradient(circle at 35% 35%, #424242 0%, #151515 85%); box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.9), 0 1px 1px rgba(255, 255, 255, 0.3); }
+
     /* Central Board */
-    #board-container { width: 100%; display: flex; justify-content: center; align-items: center; margin: auto 0; }
+    #board-container { width: 100%; display: flex; justify-content: center; align-items: center; margin: auto 0; padding: 2px 0; }
     #board {
-      position: relative; width: min(92vw, 52vh, 400px); height: min(92vw, 52vh, 400px); aspect-ratio: 1 / 1;
+      position: relative; width: min(92vw, 48vh, 390px); height: min(92vw, 48vh, 390px); aspect-ratio: 1 / 1;
       display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); grid-template-rows: repeat(15, minmax(0, 1fr));
       background: #ffffff; border: 3.5px solid #d4a72c; border-radius: 8px;
-      box-shadow: 0 0 0 2px #5a3c08, 0 8px 24px rgba(0, 0, 0, 0.65); overflow: hidden;
+      box-shadow: 0 0 0 2px #5a3c08, 0 8px 24px rgba(0, 0, 0, 0.65);
+      overflow: visible;
     }
     .base { position: relative; display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; }
-    .base.red { background: linear-gradient(135deg, #e71d36, #b80c23); }
-    .base.green { background: linear-gradient(135deg, #00b050, #007a36); }
-    .base.yellow { background: linear-gradient(135deg, #ffc000, #d49500); }
-    .base.blue { background: linear-gradient(135deg, #0088ff, #005bb5); }
+    .base.red { background: linear-gradient(135deg, #e71d36, #b80c23); border-top-left-radius: 5px; }
+    .base.green { background: linear-gradient(135deg, #00b050, #007a36); border-top-right-radius: 5px; }
+    .base.yellow { background: linear-gradient(135deg, #ffc000, #d49500); border-bottom-right-radius: 5px; }
+    .base.blue { background: linear-gradient(135deg, #0088ff, #005bb5); border-bottom-left-radius: 5px; }
     .base .inner { width: 66.6%; height: 66.6%; background: #ffffff; border-radius: 8px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); }
     .sl {
       position: absolute; width: 6.67%; height: 6.67%; border-radius: 50%; border: 2px solid var(--k);
@@ -228,18 +253,19 @@ $v = time();
     .tk {
       position: absolute; width: 6.67%; height: 6.67%; z-index: 10; display: flex; align-items: center;
       justify-content: center; pointer-events: none; transition: left 0.16s linear, top 0.16s linear;
+      will-change: left, top, transform;
     }
     .tk-inner { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-    .tk svg { width: 95%; height: 130%; margin-top: -38%; filter: drop-shadow(0 4px 3px rgba(0,0,0,0.55)); }
+    .tk svg { width: 95%; height: 125%; margin-top: -28%; filter: drop-shadow(0 3px 3px rgba(0,0,0,0.55)); transform-origin: 50% 90%; overflow: visible; }
     .tk.red { --k: #e71d36; } .tk.green { --k: #00b050; } .tk.yellow { --k: #ffc000; } .tk.blue { --k: #0088ff; }
     .tk.go { z-index: 16; pointer-events: auto; cursor: pointer; }
     .tk.go .tk-inner { animation: tokenHop 0.45s infinite alternate cubic-bezier(0.2, 0.8, 0.4, 1); filter: drop-shadow(0 0 6px #ffffff) drop-shadow(0 0 12px #ffe600); }
     @keyframes tokenHop { 0% { transform: translateY(0); } 100% { transform: translateY(-32%); } }
 
     .foot-bar {
-      width: min(92vw, 52vh, 400px); padding: 8px 12px; background: rgba(0, 15, 50, 0.7);
+      width: min(92vw, 48vh, 390px); padding: 8px 12px; background: rgba(0, 15, 50, 0.7);
       border: 1.5px solid #ffd700; border-radius: 12px; text-align: center;
-      font-size: 13.5px; font-weight: 900; color: #ffd700;
+      font-size: 13px; font-weight: 900; color: #ffd700;
     }
   </style>
 </head>
@@ -338,14 +364,14 @@ $v = time();
             <div class="av-wrap"><svg class="av-svg" style="--k:#e8212c"><use href="#pn"/></svg></div>
             <div class="p-info"><span class="pn" id="name-red">Waiting...</span></div>
           </div>
-          <div class="db"><div class="die-val" id="die-red">🎲</div><div class="dots-timer"><i></i><i></i><i></i><i></i><i></i></div></div>
+          <div class="db" title="Roll Dice"><div class="die show" id="die-red"></div><div class="dots-timer"><i></i><i></i><i></i><i></i><i></i></div></div>
         </div>
         <div class="slot r" id="slot-green" data-c="green">
           <div class="pb">
             <div class="av-wrap"><svg class="av-svg" style="--k:#0c8f43"><use href="#pn"/></svg></div>
             <div class="p-info"><span class="pn" id="name-green">Waiting...</span></div>
           </div>
-          <div class="db"><div class="die-val" id="die-green">🎲</div><div class="dots-timer"><i></i><i></i><i></i><i></i><i></i></div></div>
+          <div class="db" title="Roll Dice"><div class="die show" id="die-green"></div><div class="dots-timer"><i></i><i></i><i></i><i></i><i></i></div></div>
         </div>
       </div>
 
@@ -359,14 +385,14 @@ $v = time();
             <div class="av-wrap"><svg class="av-svg" style="--k:#1ea3f2"><use href="#pn"/></svg></div>
             <div class="p-info"><span class="pn" id="name-blue">Waiting...</span></div>
           </div>
-          <div class="db"><div class="die-val" id="die-blue">🎲</div><div class="dots-timer"><i></i><i></i><i></i><i></i><i></i></div></div>
+          <div class="db" title="Roll Dice"><div class="die show" id="die-blue"></div><div class="dots-timer"><i></i><i></i><i></i><i></i><i></i></div></div>
         </div>
         <div class="slot r" id="slot-yellow" data-c="yellow">
           <div class="pb">
             <div class="av-wrap"><svg class="av-svg" style="--k:#fdd414"><use href="#pn"/></svg></div>
             <div class="p-info"><span class="pn" id="name-yellow">Waiting...</span></div>
           </div>
-          <div class="db"><div class="die-val" id="die-yellow">🎲</div><div class="dots-timer"><i></i><i></i><i></i><i></i><i></i></div></div>
+          <div class="db" title="Roll Dice"><div class="die show" id="die-yellow"></div><div class="dots-timer"><i></i><i></i><i></i><i></i><i></i></div></div>
         </div>
       </div>
 
@@ -631,6 +657,12 @@ $v = time();
         b.appendChild(s);
       }));
 
+      // Initialize 3D dice cubes in each slot
+      COL.forEach(c => {
+        const dEl = document.getElementById(`die-${c}`);
+        if (dEl) face(dEl, 1);
+      });
+
       // Bind Dice click for my turn
       document.querySelectorAll('.slot').forEach(s => {
         s.querySelector('.db').onclick = () => {
@@ -641,21 +673,107 @@ $v = time();
       });
     }
 
+    // 3D Dice Helper Functions
+    const PIPS = {
+      1: [4],
+      2: [0, 8],
+      3: [0, 4, 8],
+      4: [0, 2, 6, 8],
+      5: [0, 2, 4, 6, 8],
+      6: [0, 2, 3, 5, 6, 8]
+    };
+
+    const ORI = {
+      1: [0, 0],
+      6: [0, 180],
+      2: [0, -90],
+      5: [0, 90],
+      3: [-90, 0],
+      4: [90, 0]
+    };
+
+    function cube(el) {
+      if (el.firstChild) return el.firstChild;
+      const c = document.createElement('div');
+      c.className = 'cube';
+      c.innerHTML = [1, 2, 3, 4, 5, 6].map(n =>
+        `<div class="f f${n}">${Array.from({ length: 9 }, (_, i) => `<i class="${PIPS[n].includes(i) ? 'on' : ''}"></i>`).join('')}</div>`
+      ).join('');
+      el.appendChild(c);
+      return c;
+    }
+
+    function face(el, v) {
+      if (!el) return;
+      const [x, y] = ORI[v] || [0, 0];
+      cube(el).style.transform = `rotateX(${x}deg) rotateY(${y}deg)`;
+      el.classList.add('show');
+    }
+
+    async function tumble(el, down, d) {
+      if (!el) return;
+      el.classList.add('big');
+      el.classList.add('show');
+      const c = cube(el);
+      const s = down ? 1 : -1;
+      const [fx, fy] = ORI[d] || [0, 0];
+
+      c.style.transform = `rotateX(${fx}deg) rotateY(${fy}deg)`;
+
+      const t0 = `rotateX(${fx - 720}deg) rotateY(${fy - 1080}deg) rotateZ(0deg)`;
+      const tm = `rotateX(${fx - 360}deg) rotateY(${fy - 540}deg) rotateZ(20deg)`;
+      const t1 = `rotateX(${fx}deg) rotateY(${fy}deg) rotateZ(0deg)`;
+
+      const a1 = c.animate([{ transform: t0 }, { transform: tm, offset: 0.5 }, { transform: t1 }], {
+        duration: 620,
+        easing: 'cubic-bezier(.22,.75,.35,1)'
+      });
+      const a2 = el.animate([
+        { transform: 'translate3d(0,0,0) scale(1)' },
+        { transform: `translate3d(2px,${s * 2}px,0) scale(1.22)`, offset: 0.35 },
+        { transform: `translate3d(-1px,${s * 3}px,0) scale(1.26)`, offset: 0.65 },
+        { transform: 'translate3d(0,0,0) scale(1)' }
+      ], {
+        duration: 620,
+        easing: 'ease-in-out'
+      });
+
+      await Promise.all([a1.finished, a2.finished]).catch(() => {});
+      el.classList.remove('big');
+      face(el, d);
+    }
+
+    let isRolling = false;
+    let lastAnimatedRoll = { red: 0, green: 0, yellow: 0, blue: 0 };
+
     async function handleDiceRoll() {
+      if (isRolling || currentTurnColor !== myColor) return;
+      isRolling = true;
+      Snd.unlock();
       Snd.dice();
+
+      const el = document.getElementById(`die-${myColor}`);
+      const isTopRow = (myColor === 'red' || myColor === 'green');
+
       const fd = new FormData();
       fd.append('action', 'roll_dice');
       fd.append('room_code', myCode);
       fd.append('token', myToken);
       fd.append('color', myColor);
 
-      const res = await fetch('api/online.php', { method: 'POST', body: fd }).then(r => r.json());
-      if (res.ok) {
-        document.getElementById(`die-${myColor}`).textContent = res.dice;
-        pollGameState();
-      } else {
-        alert(res.error || 'Cannot roll dice.');
-      }
+      try {
+        const res = await fetch('api/online.php', { method: 'POST', body: fd }).then(r => r.json());
+        if (res.ok) {
+          const d = +res.dice;
+          lastAnimatedRoll[myColor] = d;
+          await tumble(el, isTopRow, d);
+          face(el, d);
+          pollGameState();
+        } else {
+          alert(res.error || 'Cannot roll dice.');
+        }
+      } catch (e) {}
+      isRolling = false;
     }
 
     async function handleTokenClick(tokenIndex) {
@@ -683,7 +801,7 @@ $v = time();
         if (!res.ok) return;
 
         currentTurnColor = res.room.turn_color;
-        const diceVal = res.room.dice_value;
+        const diceVal = parseInt(res.room.dice_value) || 0;
         const diceState = res.room.dice_state;
 
         // Update player names
@@ -699,10 +817,26 @@ $v = time();
           const isTurn = (c === currentTurnColor);
           s.classList.toggle('act', isTurn);
           s.classList.toggle('my-turn', isTurn && (c === myColor) && (diceState === 'roll'));
-          if (diceVal > 0 && isTurn) {
-            document.getElementById(`die-${c}`).textContent = diceVal;
-          }
         });
+
+        // 3D Dice Roll Animation sync across all screens
+        if (diceVal > 0 && diceState === 'move') {
+          if (lastAnimatedRoll[currentTurnColor] !== diceVal) {
+            lastAnimatedRoll[currentTurnColor] = diceVal;
+            const turnDie = document.getElementById(`die-${currentTurnColor}`);
+            if (turnDie) {
+              if (currentTurnColor !== myColor) {
+                Snd.dice();
+                const isTop = (currentTurnColor === 'red' || currentTurnColor === 'green');
+                tumble(turnDie, isTop, diceVal);
+              } else {
+                face(turnDie, diceVal);
+              }
+            }
+          }
+        } else if (diceState === 'roll') {
+          lastAnimatedRoll[currentTurnColor] = 0;
+        }
 
         // Update status bar
         const statusEl = document.getElementById('game-status-bar');
@@ -715,9 +849,9 @@ $v = time();
 
         if (currentTurnColor === myColor) {
           if (diceState === 'roll') {
-            statusEl.textContent = '👉 YOUR TURN: Roll the Dice!';
+            statusEl.textContent = '👉 YOUR TURN: Tap Dice to Roll!';
           } else {
-            statusEl.textContent = `👉 Rolled a ${diceVal}! Tap a token to move!`;
+            statusEl.textContent = `👉 Rolled a ${diceVal}! Tap glowing goti to move!`;
           }
           statusEl.style.color = '#22c55e';
         } else {
@@ -730,9 +864,14 @@ $v = time();
       } catch (e) {}
     }
 
+    const HC = { red: [7, 6.4], green: [6.4, 7], yellow: [7, 7.6], blue: [7.6, 7] };
+    const START_OFFSET = { red: 0, green: 13, yellow: 26, blue: 39 };
+
     function renderOnlineTokens(tokens, diceVal, diceState) {
       const b = document.getElementById('board');
       document.querySelectorAll('.tk').forEach(t => t.remove());
+
+      const activeTokens = [];
 
       tokens.forEach(tk => {
         const c = tk.color;
@@ -748,7 +887,7 @@ $v = time();
         } else if (pos >= 51 && pos <= 55) {
           [r, k] = LANE[c][pos - 51];
         } else if (pos === 56) {
-          [r, k] = [7, 7]; // Center finished
+          [r, k] = HC[c];
         }
 
         if (r === -1) return;
@@ -757,7 +896,7 @@ $v = time();
         el.className = `tk ${c}`;
         el.style.left = (k * 100 / 15) + '%';
         el.style.top = (r * 100 / 15) + '%';
-        el.innerHTML = `<div class="tk-inner"><svg><use href="#pn"/></svg></div>`;
+        el.innerHTML = `<div class="tk-inner"><svg viewBox="0 0 40 52"><use href="#pn"/></svg></div>`;
 
         // Movable if my turn, dice rolled, and token can legally move
         const isMyTurn = (c === myColor && currentTurnColor === myColor && diceState === 'move');
@@ -771,10 +910,31 @@ $v = time();
         }
 
         b.appendChild(el);
+        tk.el = el;
+        tk.r = r;
+        tk.k = k;
+        activeTokens.push(tk);
+      });
+
+      // Multi-token stacking and collision layout (fans out gotis sharing a cell)
+      const cellMap = {};
+      activeTokens.forEach(tk => {
+        const pos = parseInt(tk.pos);
+        if (pos >= 0 && pos < 56) {
+          const key = `${tk.r},${tk.k}`;
+          (cellMap[key] = cellMap[key] || []).push(tk.el);
+        }
+      });
+      Object.values(cellMap).forEach(group => {
+        if (group.length > 1) {
+          const n = group.length;
+          group.forEach((el, j) => {
+            const x = (j - (n - 1) / 2) * 24;
+            el.style.transform = `translateX(${x}%) scale(${n > 2 ? 0.74 : 0.84})`;
+          });
+        }
       });
     }
-
-    const START_OFFSET = { red: 0, green: 13, yellow: 26, blue: 39 };
 
     function toggleMute() {
       const muted = Snd.toggle();

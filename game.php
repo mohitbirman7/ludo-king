@@ -40,11 +40,35 @@ $v = time();
   .stage {
     position: relative; width: 100%; max-width: 440px; height: 100dvh; max-height: 100dvh;
     display: flex; flex-direction: column; justify-content: space-between; align-items: center;
-    padding: 6px 8px 10px; z-index: 1;
+    padding-top: max(env(safe-area-inset-top, 0px), 32px);
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 10px);
+    padding-left: max(env(safe-area-inset-left, 0px), 10px);
+    padding-right: max(env(safe-area-inset-right, 0px), 10px);
+    z-index: 1;
   }
+  .top-nav {
+    display: flex; justify-content: space-between; align-items: center;
+    width: min(92vw, 48vh, 390px); margin: 0 auto 4px; padding: 0 2px;
+  }
+  .top-brand {
+    font: 900 clamp(13px, 3.6vw, 16px) 'Lilita One', 'Roboto', sans-serif;
+    color: #ffd700; letter-spacing: 1.5px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(255, 215, 0, 0.4);
+    background: rgba(0, 15, 50, 0.55); border: 1.5px solid #ffd700;
+    padding: 3px 14px; border-radius: 20px;
+  }
+  .top-btn {
+    width: clamp(34px, 4.8vh, 38px); height: clamp(34px, 4.8vh, 38px);
+    border-radius: 50%; border: 1.5px solid #ffd700;
+    background: linear-gradient(180deg, #1852b4, #0c2d6e); color: #ffffff;
+    font-size: clamp(14px, 2.2vh, 17px); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+  }
+  .top-btn:active { transform: scale(0.93); }
   .rowS {
     display: flex; justify-content: space-between; align-items: center;
-    width: min(92vw, 52vh, 400px); margin: 0 auto; padding: 2px 0;
+    width: min(92vw, 48vh, 390px); margin: 0 auto; padding: 2px 0;
   }
   .slot {
     position: relative; display: flex; align-items: center; justify-content: space-between;
@@ -124,19 +148,20 @@ $v = time();
   .f4 { transform: rotateX(-90deg) translateZ(21px); }
   .f i { width: 82%; height: 82%; margin: auto; border-radius: 50%; }
   .f i.on { background: radial-gradient(circle at 35% 35%, #424242 0%, #151515 85%); box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.9), 0 1px 1px rgba(255, 255, 255, 0.3); }
-  #board-container { width: 100%; display: flex; justify-content: center; align-items: center; margin: auto 0; }
+  #board-container { width: 100%; display: flex; justify-content: center; align-items: center; margin: auto 0; padding: 2px 0; }
   #board {
-    position: relative; width: min(92vw, 52vh, 400px); height: min(92vw, 52vh, 400px);
+    position: relative; width: min(92vw, 48vh, 390px); height: min(92vw, 48vh, 390px);
     aspect-ratio: 1 / 1;
     display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); grid-template-rows: repeat(15, minmax(0, 1fr));
     background: #ffffff; border: 3.5px solid #d4a72c; border-radius: 8px;
-    box-shadow: 0 0 0 2px #5a3c08, 0 8px 24px rgba(0, 0, 0, 0.65); overflow: hidden;
+    box-shadow: 0 0 0 2px #5a3c08, 0 8px 24px rgba(0, 0, 0, 0.65);
+    overflow: visible;
   }
   .base { position: relative; display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; }
-  .base.red { background: linear-gradient(135deg, #e71d36 0%, #b80c23 100%); }
-  .base.green { background: linear-gradient(135deg, #00b050 0%, #007a36 100%); }
-  .base.yellow { background: linear-gradient(135deg, #ffc000 0%, #d49500 100%); }
-  .base.blue { background: linear-gradient(135deg, #0088ff 0%, #005bb5 100%); }
+  .base.red { background: linear-gradient(135deg, #e71d36 0%, #b80c23 100%); border-top-left-radius: 5px; }
+  .base.green { background: linear-gradient(135deg, #00b050 0%, #007a36 100%); border-top-right-radius: 5px; }
+  .base.yellow { background: linear-gradient(135deg, #ffc000 0%, #d49500 100%); border-bottom-right-radius: 5px; }
+  .base.blue { background: linear-gradient(135deg, #0088ff 0%, #005bb5 100%); border-bottom-left-radius: 5px; }
   .base .inner {
     width: 66.6%; height: 66.6%; background: #ffffff; border-radius: 8px;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.15); position: relative;
@@ -172,9 +197,10 @@ $v = time();
   .tk {
     position: absolute; width: 6.67%; height: 6.67%; z-index: 10; display: flex; align-items: center;
     justify-content: center; pointer-events: none; transition: left 0.16s linear, top 0.16s linear;
+    will-change: left, top, transform;
   }
   .tk-inner { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-  .tk svg { width: 95%; height: 130%; margin-top: -38%; filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.55)); transform-origin: 50% 90%; overflow: visible; }
+  .tk svg { width: 95%; height: 125%; margin-top: -28%; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.55)); transform-origin: 50% 90%; overflow: visible; }
   .tk.red    { --k: #e71d36; }
   .tk.green  { --k: #00b050; }
   .tk.yellow { --k: #ffc000; }
@@ -187,7 +213,7 @@ $v = time();
   .tk.retreating { transition: left 0.04s linear, top 0.04s linear !important; opacity: 0.9; filter: brightness(1.2) drop-shadow(0 0 8px #ff4757); }
   .tk.home-celebrate { animation: homeSpin 0.7s ease-out; }
   @keyframes homeSpin { 0% { transform: scale(1) rotate(0); } 50% { transform: scale(1.4) rotate(180deg); } 100% { transform: scale(1) rotate(360deg); } }
-  .foot { display: flex; justify-content: space-between; align-items: center; width: min(92vw, 52vh, 400px); margin: 0 auto; padding: 0; height: clamp(40px, 6vh, 48px); }
+  .foot { display: flex; justify-content: space-between; align-items: center; width: min(92vw, 48vh, 390px); margin: 0 auto; padding: 0; height: clamp(38px, 5.5vh, 44px); }
   .foot button {
     width: clamp(38px, 5.5vh, 44px); height: clamp(38px, 5.5vh, 44px); border-radius: 12px; border: 2px solid #e5c04b;
     background: linear-gradient(180deg, #1852b4, #0c2d6e); color: #ffffff; font-size: clamp(16px, 2.5vh, 20px);
@@ -264,6 +290,13 @@ $v = time();
   </svg>
 
   <div class="stage">
+    <!-- Top Header Bar with Menu, Game Title, and Sound Toggle -->
+    <div class="top-nav">
+      <button class="top-btn" id="top-menu-btn" title="Game Menu">☰</button>
+      <div class="top-brand">👑 LUDO KING</div>
+      <button class="top-btn" id="top-sound-btn" title="Toggle Sound">🔊</button>
+    </div>
+
     <!-- Top Player Bar -->
     <div class="rowS">
       <!-- Player Red (Top Left) -->

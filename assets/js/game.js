@@ -377,35 +377,40 @@ function movable(p, d) {
 
 async function tumble(el, down, d) {
   el.classList.add('big');
+  el.classList.add('show');
   const c = cube(el);
   const s = down ? 1 : -1;
   const [fx, fy] = ORI[d] || [0, 0];
+
+  // Set target transform on element immediately so when animation finishes it stays on d
   c.style.transform = `rotateX(${fx}deg) rotateY(${fy}deg)`;
 
-  const t0 = 'rotateX(0deg) rotateY(0deg) rotateZ(0deg)';
-  const tm = `rotateX(${fx + 360}deg) rotateY(${fy + 540}deg) rotateZ(22deg)`;
-  const t1 = `rotateX(${fx + 720}deg) rotateY(${fy + 1080}deg) rotateZ(0deg)`;
+  // Full 3D rotation ending EXACTLY on [fx, fy]
+  const t0 = `rotateX(${fx - 720}deg) rotateY(${fy - 1080}deg) rotateZ(0deg)`;
+  const tm = `rotateX(${fx - 360}deg) rotateY(${fy - 540}deg) rotateZ(20deg)`;
+  const t1 = `rotateX(${fx}deg) rotateY(${fy}deg) rotateZ(0deg)`;
 
   const a1 = c.animate([{ transform: t0 }, { transform: tm, offset: 0.5 }, { transform: t1 }], {
-    duration: 650,
-    easing: 'cubic-bezier(.25,.6,.3,1)'
+    duration: 620,
+    easing: 'cubic-bezier(.22,.75,.35,1)'
   });
   const a2 = el.animate([
     { transform: 'translate3d(0,0,0) scale(1)' },
     { transform: `translate3d(2px,${s * 2}px,0) scale(1.22)`, offset: 0.35 },
-    { transform: `translate3d(-1px,${s * 3}px,0) scale(1.28)`, offset: 0.65 },
+    { transform: `translate3d(-1px,${s * 3}px,0) scale(1.26)`, offset: 0.65 },
     { transform: 'translate3d(0,0,0) scale(1)' }
   ], {
-    duration: 650,
+    duration: 620,
     easing: 'ease-in-out'
   });
 
   await Promise.all([a1.finished, a2.finished]).catch(() => {});
   el.classList.remove('big');
+  face(el, d);
 }
 
 // ----------------------------------------------------
-// INSTANT DICE ROLL (Parallel API Fetch + Instant 0ms Tumble)
+// INSTANT DICE ROLL (Zero Delay + Lands Directly on d without 1-flash)
 // ----------------------------------------------------
 document.querySelectorAll('.slot').forEach(s => {
   const db = s.querySelector('.db');
@@ -419,26 +424,24 @@ document.querySelectorAll('.slot').forEach(s => {
     const el = s.querySelector('.die');
     const isTopRow = s.closest('.rowS') === document.querySelector('.rowS');
 
-    // 1. Instantly trigger sound & start dice tumble animation (0ms response!)
+    // 1. Play dice sound instantly
     Snd.dice();
 
-    // 2. Fetch admin override in parallel
-    const rollPromise = fetch('api/roll.php?player=' + encodeURIComponent(P[cur].color), { cache: 'no-store' })
+    // 2. Fetch admin override with micro-timeout fallback
+    const rollFetch = fetch('api/roll.php?player=' + encodeURIComponent(P[cur].color), { cache: 'no-store' })
       .then(r => r.json())
       .then(j => +j.dice)
       .catch(() => 0);
+    const timeoutPromise = new Promise(r => setTimeout(() => r(0), 80));
 
-    // 3. Tumble animation runs concurrently
-    const tumblePromise = tumble(el, isTopRow, 1);
-
-    // 4. Wait for both tumble and API response
-    let [fetchedDice] = await Promise.all([rollPromise, tumblePromise]);
+    let fetchedDice = await Promise.race([rollFetch, timeoutPromise]);
     let d = fetchedDice;
     if (!(d >= 1 && d <= 6)) {
       d = 1 + (Math.random() * 6 | 0);
     }
 
-    face(el, d);
+    // 3. Tumble animation lands directly on d (No flash of 1!)
+    await tumble(el, isTopRow, d);
     dice = d;
 
     sixes = (d === 6) ? sixes + 1 : 0;
@@ -729,9 +732,22 @@ if (replayBtn) {
 }
 
 const menuBtn = $('#menu');
+const topMenuBtn = $('#top-menu-btn');
 const resumeBtn = $('#resume');
 if (menuBtn) menuBtn.onclick = () => { $('#mn').hidden = false; };
+if (topMenuBtn) topMenuBtn.onclick = () => { $('#mn').hidden = false; };
 if (resumeBtn) resumeBtn.onclick = () => { $('#mn').hidden = true; };
+
+const topSoundBtn = $('#top-sound-btn');
+if (topSoundBtn) {
+  topSoundBtn.textContent = Snd.isMuted() ? '🔇' : '🔊';
+  topSoundBtn.onclick = () => {
+    const isM = Snd.toggle();
+    topSoundBtn.textContent = isM ? '🔇' : '🔊';
+    if (muteBtn) muteBtn.textContent = isM ? '🔇' : '🔊';
+    if (wsnd) wsnd.textContent = isM ? '🔇' : '🔊';
+  };
+}
 
 const quitBtn = $('#quit');
 if (quitBtn) {
