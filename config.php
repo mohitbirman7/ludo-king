@@ -35,14 +35,15 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS dice_override (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )");
 
-// Check if room_code column exists in dice_override, if not add it
+// Check if room_code and created_at columns exist in dice_override, if not add them
 $cols = $pdo->query("PRAGMA table_info(dice_override)")->fetchAll(PDO::FETCH_ASSOC);
-$hasRoom = false;
-foreach ($cols as $c) {
-    if ($c['name'] === 'room_code') { $hasRoom = true; break; }
-}
-if (!$hasRoom) {
+$colNames = array_column($cols, 'name');
+if (!in_array('room_code', $colNames, true)) {
     $pdo->exec("ALTER TABLE dice_override ADD COLUMN room_code TEXT DEFAULT 'local'");
+}
+if (!in_array('created_at', $colNames, true)) {
+    $pdo->exec("ALTER TABLE dice_override ADD COLUMN created_at DATETIME DEFAULT NULL");
+    $pdo->exec("UPDATE dice_override SET created_at = datetime('now') WHERE created_at IS NULL");
 }
 
 // 2. Admins Table (Stores email/username and password_hash)
@@ -126,3 +127,35 @@ if ($envPass) {
     // Default fallback: admin / mohit@1760
     $pdo->prepare("INSERT INTO admins (username,password_hash) VALUES (?,?)")->execute(['admin', password_hash('mohit@1760', PASSWORD_DEFAULT)]);
 }
+
+/**
+ * Auto-cleanup function:
+ * Automatically purges match and dice data older than 1 day (or finished/inactive rooms).
+ * Cascades to players and tokens, keeping the SQLite database small, fast, and free of obsolete data.
+ */
+function purge_old_ludo_data($pdo, $force = false) {
+    try {
+        if ($force) {
+            // Force clean: delete finished rooms or rooms inactive for > 4 hours
+            $pdo->exec("DELETE FROM online_rooms WHERE updated_at < datetime('now', '-4 hours') OR status = 'finished' OR created_at < datetime('now', '-1 day')");
+        } else {
+            // Standard auto-clean: delete rooms older than 1 day (24 hours) or finished > 6 hours
+            $pdo->exec("DELETE FROM online_rooms WHERE updated_at < datetime('now', '-1 day') OR created_at < datetime('now', '-1 day') OR (status = 'finished' AND updated_at < datetime('now', '-6 hours'))");
+        }
+
+        // Cascade delete orphaned players & tokens for purged rooms
+        $pdo->exec("DELETE FROM online_players WHERE room_code NOT IN (SELECT room_code FROM online_rooms)");
+        $pdo->exec("DELETE FROM online_tokens WHERE room_code NOT IN (SELECT room_code FROM online_rooms)");
+
+        // Purge dice overrides:
+        // 1. Any override for a room that no longer exists
+        $pdo->exec("DELETE FROM dice_override WHERE room_code != 'local' AND room_code NOT IN (SELECT room_code FROM online_rooms)");
+        // 2. Used overrides older than 1 day
+        $pdo->exec("DELETE FROM dice_override WHERE used = 1 AND (created_at < datetime('now', '-1 day') OR created_at IS NULL)");
+        // 3. Keep maximum 30 past roll history records so the table never bloats
+        $pdo->exec("DELETE FROM dice_override WHERE used = 1 AND id NOT IN (SELECT id FROM dice_override WHERE used = 1 ORDER BY id DESC LIMIT 30)");
+    } catch (Exception $e) {}
+}
+
+// Automatically invoke purge during routine access
+purge_old_ludo_data($pdo);

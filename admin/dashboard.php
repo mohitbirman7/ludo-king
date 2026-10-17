@@ -125,7 +125,10 @@ $v = time();
 
     <!-- Active Online Rooms List -->
     <div class="rooms-card">
-      <h3 style="margin:0 0 10px;color:#ffd700;">🌐 Live Online Multiplayer Rooms</h3>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+        <h3 style="margin:0;color:#ffd700;">🌐 Live Online Multiplayer Rooms (Last 24h)</h3>
+        <button type="button" class="g" onclick="purgeOldRooms()" style="padding:5px 12px; font-size:12px; background:linear-gradient(180deg,#7b1fa2,#4a148c); border:1px solid #ba68c8; color:#fff; border-radius:6px; cursor:pointer; font-weight:700;">🧹 Clear Old / Inactive Rooms</button>
+      </div>
       <table class="rooms-table">
         <thead>
           <tr>
@@ -222,6 +225,7 @@ $v = time();
               <button class="btn-select-room" onclick="selectRoomFromTable('${rm.room_code}')">
                 ${isSel ? '✓ Controlled' : 'Control Dice'}
               </button>
+              <button onclick="deleteSingleRoom('${rm.room_code}')" style="background:#b71c1c; border:1px solid #ef5350; color:#fff; padding:3px 7px; border-radius:6px; cursor:pointer; font-size:11px; margin-left:4px; font-weight:700;" title="Delete this room">🗑️</button>
             </td>
           `;
           tbody.appendChild(tr);
@@ -233,6 +237,23 @@ $v = time();
     function selectRoomFromTable(code) {
       document.getElementById('room-dropdown').value = code;
       onRoomChange(code);
+    }
+
+    async function purgeOldRooms() {
+      if (!confirm('Erase all inactive and older test rooms?')) return;
+      busy = true;
+      draw(await api({ action: 'clear_old_rooms' }));
+      busy = false;
+    }
+
+    async function deleteSingleRoom(code) {
+      if (!confirm(`Delete Room ${code} and erase its data?`)) return;
+      busy = true;
+      if (selectedRoom === code) {
+        onRoomChange('local');
+      }
+      draw(await api({ action: 'delete_room', target_room: code }));
+      busy = false;
     }
 
     document.addEventListener('click', async e => {

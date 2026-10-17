@@ -25,8 +25,8 @@ function snap($pdo, $C, $room = 'local') {
         $o[$c] = ['queue' => $q, 'last' => $l];
     }
 
-    // Also fetch list of active online rooms
-    $rSt = $pdo->query("SELECT room_code, host_name, max_players, status, turn_color, updated_at FROM online_rooms ORDER BY id DESC LIMIT 15");
+    // Also fetch list of active online rooms (only recent from last 24 hours)
+    $rSt = $pdo->query("SELECT room_code, host_name, max_players, status, turn_color, updated_at FROM online_rooms WHERE updated_at >= datetime('now', '-1 day') ORDER BY id DESC LIMIT 15");
     $rooms = $rSt->fetchAll(PDO::FETCH_ASSOC);
 
     return [
@@ -66,6 +66,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("DELETE FROM dice_override WHERE room_code = ? AND used = 0")->execute([$room]);
     } elseif ($a === 'clear_history') {
         $pdo->prepare("DELETE FROM dice_override WHERE room_code = ? AND used = 1")->execute([$room]);
+    } elseif ($a === 'clear_old_rooms') {
+        purge_old_ludo_data($pdo, true);
+    } elseif ($a === 'delete_room') {
+        $target = trim($in['target_room'] ?? '');
+        if ($target && $target !== 'local') {
+            $pdo->prepare("DELETE FROM online_rooms WHERE room_code = ?")->execute([$target]);
+            $pdo->prepare("DELETE FROM online_players WHERE room_code = ?")->execute([$target]);
+            $pdo->prepare("DELETE FROM online_tokens WHERE room_code = ?")->execute([$target]);
+            $pdo->prepare("DELETE FROM dice_override WHERE room_code = ?")->execute([$target]);
+        }
     }
 }
 
