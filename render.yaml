@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: ludo
+    runtime: docker
+    plan: free
+    envVars:
+      - key: ADMIN_USER
+        value: admin
+      - key: ADMIN_PASS
+        sync: false
